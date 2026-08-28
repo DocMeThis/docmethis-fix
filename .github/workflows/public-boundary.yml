@@ -1,0 +1,37 @@
+name: Public boundary
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  boundary:
+    name: Check public repository boundary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Reject private implementation paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -d src
+          test ! -d docmethis
+          test ! -f pyproject.toml
+          test ! -f uv.lock
+          while IFS= read -r path; do
+            case "$path" in
+              module2/*|module5/*|fix/*|patch/*|audit/*|gateway/*|prompts/*|config/llm_*)
+                printf 'Forbidden private path: %s\n' "$path" >&2
+                exit 1
+                ;;
+            esac
+          done < <(git ls-files)

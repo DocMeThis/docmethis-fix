@@ -1,0 +1,30 @@
+name: Support question
+description: Ask for help with public templates, configuration or releases.
+labels:
+  - "type: support"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read the [support guide](../../SUPPORT.md) and the [troubleshooting guide](../../docs/en/troubleshooting.md) first.
+  - type: input
+    id: facade-revision
+    attributes:
+      label: Facade revision
+      description: Public facade commit SHA or release record identifier.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Sanitized context
+      description: Include non-secret configuration names and the Check summary, never secret values.
+    validations:
+      required: false

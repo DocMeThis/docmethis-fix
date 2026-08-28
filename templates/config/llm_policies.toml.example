@@ -1,0 +1,14 @@
+# Copy to the consumer repository as config/llm_policies.toml and select a
+# model/policy supported by the private runtime release.
+
+[fix.example]
+model = "provider/model"
+max_attempts = 3
+timeout_seconds = 30.0
+token_budget = 8000
+prompt_variant = "compact"
+structured_output_mode = "guided_json"
+
+[fix.example.generation_options]
+temperature = 0.0
+max_tokens = 8000
