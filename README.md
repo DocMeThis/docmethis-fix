@@ -135,6 +135,46 @@ change even when the affected public symbol itself was not edited.
 Existing documentation is edited at the smallest useful granularity. A full
 docstring rewrite is not the default.
 
+## Local Execution
+
+Fix also supports local runs when the executable runtime is available. This
+public repository contains the integration contract and workflow templates; it
+does not ship the executable runtime. Use a DocMeThis engine checkout or the
+matching private release supplied for your environment.
+
+After installing the engine checkout with `uv sync`, prepare a Check report and
+keep both API keys outside Git:
+
+```bash
+ENGINE_ROOT=/path/to/docmethis
+TARGET_ROOT=/path/to/project
+REPORT="$TARGET_ROOT/check.json"
+
+export DOCMETHIS_FIX_API_KEY_FILE="$HOME/.config/docmethis/fix-api-key"
+export OPENROUTER_API_KEY="..."
+test -s "$DOCMETHIS_FIX_API_KEY_FILE"
+
+uv --directory "$ENGINE_ROOT" run python -m docmethis_check "$TARGET_ROOT" \
+  --base-ref main \
+  --json-output-file "$REPORT"
+
+uv --directory "$ENGINE_ROOT" run python -m docmethis.fix "$REPORT" \
+  --project-root "$TARGET_ROOT" \
+  --profile openrouter \
+  --model gpt-oss-20b \
+  --preview
+```
+
+`DOCMETHIS_FIX_API_KEY_FILE` contains the Gateway key; `OPENROUTER_API_KEY`
+authenticates the selected LLM provider. Use the provider environment variable
+named by the selected profile. `--preview` generates the first eligible patch
+without writing files or committing, but it still contacts Gateway and the LLM.
+Omit `--preview` to apply corrections; add `--no-commit` to leave them
+uncommitted.
+
+See the [Fix preview scenario](https://github.com/DocMeThis/docmethis-playground/blob/main/docs/scenarios/fix-preview.md)
+and [provider configuration scenario](https://github.com/DocMeThis/docmethis-playground/blob/main/docs/scenarios/fix-provider-config.md).
+
 ## Built For Control
 
 - The private Fix release pipeline blocks on Bandit and `pip-audit`.

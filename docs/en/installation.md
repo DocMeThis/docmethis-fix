@@ -16,6 +16,13 @@ ship the runtime itself.
 The workflow must install an immutable runtime artifact pinned by hash. It must
 never resolve a branch, mutable tag, `latest` reference or shortened SHA.
 
+## Local Execution
+
+Local execution uses the executable runtime from a DocMeThis engine checkout or
+a matching private release supplied for your
+environment. The full command, including the Gateway key file and provider key
+setup, is documented in the [README's local execution section](../../README.md#local-execution).
+
 ## Immutable Runtime Pin
 
 Use repository or organization variables for the non-secret pinning data:
