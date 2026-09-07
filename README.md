@@ -229,9 +229,15 @@ process described by [SECURITY.md](SECURITY.md).
   </a>
 </p>
 
-## Commercial Terms
+## Licensing and Commercial Terms
 
-DocMeThis Fix is proprietary commercial software and material. This repository
-does not grant an open-source license. Access, use, copying, modification,
-redistribution and production deployment require the applicable written
-DocMeThis agreement.
+Prose documentation in this repository is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Code examples and files under [`templates/`](templates/) are licensed under the
+[MIT License](LICENSE-MIT). The complete scope is documented in
+[`LICENSE`](LICENSE).
+
+The DocMeThis Fix runtime and implementation are proprietary commercial
+software. They are not licensed under CC BY 4.0 or the MIT License; access and
+use require the applicable written DocMeThis agreement. The DocMeThis name,
+logos, screenshots and other branding are proprietary material and are not
+covered by those licenses.

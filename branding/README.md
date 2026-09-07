@@ -1,4 +1,4 @@
 The DocMeThis logo is proprietary DocMeThis material and is not covered by the
-commercial terms for the Fix documentation or runtime.
+CC BY 4.0 or MIT licenses described in the repository's `LICENSE`.
 
-Copyright DocMeThis, all rights reserved.
+Copyright (c) 2026 DocMeThis SAS. All rights reserved.

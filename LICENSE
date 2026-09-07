@@ -1,0 +1,31 @@
+Copyright (c) 2026 DocMeThis SAS. All rights reserved.
+
+This repository contains material covered by the following terms.
+
+Documentation
+-------------
+
+Prose documentation in this repository is licensed under the Creative Commons
+Attribution 4.0 International License (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+Attribution should identify DocMeThis SAS, link to the CC BY 4.0 license, and
+indicate whether changes were made.
+
+Code examples and templates
+----------------------------
+
+Code examples in this repository and all files under `templates/` are licensed
+under the MIT License. The complete license text is in `LICENSE-MIT`.
+
+Proprietary material
+--------------------
+
+The DocMeThis Fix runtime and implementation are proprietary software and are
+not licensed under CC BY 4.0 or the MIT License.
+
+The DocMeThis name, logos, screenshots, and other branding are proprietary
+material and are not covered by these licenses.
+
+All rights not expressly granted by the applicable license above are reserved
+by DocMeThis SAS.
