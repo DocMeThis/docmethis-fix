@@ -1,4 +1,4 @@
-# Copy to the consumer repository as config/llm_api.toml and replace the
+# Copy to the consumer repository as .github/docmethis-fix/llm_api.toml and replace the
 # placeholder values. Never commit provider API keys.
 
 [example]

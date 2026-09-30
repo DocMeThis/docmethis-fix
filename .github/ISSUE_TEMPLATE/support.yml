@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Read the [support guide](../../SUPPORT.md) and the [troubleshooting guide](../../docs/en/troubleshooting.md) first.
+        Read the [support guide](../../SUPPORT.md), [installation guide](../../docs/en/installation.md) and [configuration guide](../../docs/en/configuration.md) first.
   - type: input
     id: facade-revision
     attributes:

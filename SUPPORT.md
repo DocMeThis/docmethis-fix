@@ -6,12 +6,11 @@ Check the relevant documentation first:
 
 - [Installation](docs/en/installation.md)
 - [Configuration](docs/en/configuration.md)
-- [Troubleshooting](docs/en/troubleshooting.md)
 
 ## Include
 
 - DocMeThis Fix facade revision or release record.
-- Full private runtime commit SHA and artifact SHA-256 when applicable.
+- Private `docmethis-fix` package version and index URL.
 - DocMeThis Check, Extract and Verify versions.
 - Python version, operating system and architecture.
 - Workflow event and relevant non-secret configuration names.

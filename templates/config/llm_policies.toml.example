@@ -1,4 +1,4 @@
-# Copy to the consumer repository as config/llm_policies.toml and select a
+# Copy to the consumer repository as .github/docmethis-fix/llm_policies.toml and select a
 # model/policy supported by the private runtime release.
 
 [fix.example]

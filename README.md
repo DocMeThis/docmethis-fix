@@ -185,8 +185,8 @@ and [provider configuration scenario](https://github.com/DocMeThis/docmethis-pla
 - The private Fix release pipeline blocks on Bandit and `pip-audit`.
 - Actionlint validates workflow files; Dependabot keeps actions, dependencies
   and image pins current.
-- Commercial deployment must pin a full runtime commit SHA and matching artifact
-  SHA-256 digest, never a branch, mutable tag, `latest` or short SHA.
+- Commercial deployment installs an exact `docmethis-fix` version from
+  `https://pkg.docmethis.com`, not a source checkout or GitHub Release.
 - Gateway authorization is signed and scoped to the account, request and quota.
 - Idempotent credit reservations distinguish consume from release, including
   failed or uncertain runs.
@@ -206,20 +206,19 @@ the private runtime is provisioned during commercial onboarding.
 
 1. [Talk to DocMeThis](https://docmethis.com) about Fix access and supported targets.
 2. Copy `templates/.github/workflows/docmethis-fix.yml` into the consumer repository.
-3. Pin `DOCMETHIS_FIX_RUNTIME_SHA` and `DOCMETHIS_FIX_ARTIFACT_SHA256` to the
-   supplied runtime commit and artifact digest.
-4. Configure the distribution token, Fix API key and provider credentials in
-   the consumer secret store or inference environment.
-5. Run manually, inspect the patch and let normal CI decide whether to merge.
+3. Use the exact `docmethis-fix` package version supplied by DocMeThis.
+4. Configure the Fix API key and provider credentials in the consumer secret
+   store or inference environment.
+5. Run the workflow manually after connecting the final runtime step, then
+   inspect the generated pull request through normal CI.
 
 The public workflow is a safe skeleton until the private distribution channel
-and commercial runtime contract are configured.
+and runtime execution contract are configured.
 
 Operational guides:
 
 - [Installation](docs/en/installation.md)
 - [Configuration](docs/en/configuration.md)
-- [Troubleshooting](docs/en/troubleshooting.md)
 
 ## Support
 
