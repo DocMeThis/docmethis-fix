@@ -30,7 +30,7 @@ Or if you wish, Fix can also be configured to commit straight.
 
 <p align="center">
   <a href="https://docmethis.com/fr/pricing/#ci-fix">
-    <img src="branding/cta-fix.png" alt="Subscribe to DocMeThis Fix or test with 250 free credits">
+    <img src="branding/cta-fix.png" alt="View team plans or subscribe to the free Solo plan">
   </a>
 </p>
 
@@ -46,9 +46,14 @@ credit quotas. It receives no source or prompt. The Fix API key authenticates
 that call. Approved OSS workflows may additionally present GitHub OIDC, only to
 prove eligibility.
 
+## Free For Individual Users
+
+Individual users can use DocMeThis Fix at no charge on their personal GitHub
+workspace after free registration, within the monthly credit quota.
+
 ## Free For Eligible OSS
 
-Eligible public open-source projects can use Fix at no charge after validation
+Eligible public open-source projects can use DocMeThis Fix at no charge after validation
 and activation. The repository
 must meet the OSS conditions, including public visibility, and every run remains
 subject to the approved workflow and OSS credit quota. Private and commercial
@@ -85,7 +90,7 @@ A coding agent can edit a docstring. Fix makes that edit production-grade:
 
 <p align="center">
   <a href="https://docmethis.com/fr/pricing/#ci-fix">
-    <img src="branding/cta-fix.png" alt="Subscribe to DocMeThis Fix or test with 250 free credits">
+    <img src="branding/cta-fix.png" alt="View team plans or subscribe to the free Solo plan">
   </a>
 </p>
 
@@ -114,7 +119,7 @@ validation is a controlled refusal, never a silent rewrite. A run can retain
 
 <p align="center">
   <a href="https://docmethis.com/fr/pricing/#ci-fix">
-    <img src="branding/cta-fix.png" alt="Subscribe to DocMeThis Fix or test with 250 free credits">
+    <img src="branding/cta-fix.png" alt="View team plans or subscribe to the free Solo plan">
   </a>
 </p>
 
@@ -190,7 +195,7 @@ and [provider configuration scenario](https://github.com/DocMeThis/docmethis-pla
 
 <p align="center">
   <a href="https://docmethis.com/fr/pricing/#ci-fix">
-    <img src="branding/cta-fix.png" alt="Subscribe to DocMeThis Fix or test with 250 free credits">
+    <img src="branding/cta-fix.png" alt="View team plans or subscribe to the free Solo plan">
   </a>
 </p>
 
@@ -225,7 +230,7 @@ process described by [SECURITY.md](SECURITY.md).
 
 <p align="center">
   <a href="https://docmethis.com/fr/pricing/#ci-fix">
-    <img src="branding/cta-fix.png" alt="Subscribe to DocMeThis Fix or test with 250 free credits">
+    <img src="branding/cta-fix.png" alt="View team plans or subscribe to the free Solo plan">
   </a>
 </p>
 
