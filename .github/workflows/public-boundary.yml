@@ -35,3 +35,6 @@ jobs:
                 ;;
             esac
           done < <(git ls-files)
+
+      - name: Validate workflow contracts
+        run: python3 tests/check_workflow_contract.py

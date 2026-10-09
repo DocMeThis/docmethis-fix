@@ -163,7 +163,7 @@ uv --directory "$ENGINE_ROOT" run python -m docmethis_check "$TARGET_ROOT" \
   --base-ref main \
   --json-output-file "$REPORT"
 
-uv --directory "$ENGINE_ROOT" run python -m docmethis.fix "$REPORT" \
+uv --directory "$ENGINE_ROOT" run python -m docmethis_fix "$REPORT" \
   --project-root "$TARGET_ROOT" \
   --profile openrouter \
   --model gpt-oss-20b \
@@ -206,14 +206,22 @@ the private runtime is provisioned during commercial onboarding.
 
 1. [Talk to DocMeThis](https://docmethis.com) about Fix access and supported targets.
 2. Copy `templates/.github/workflows/docmethis-fix.yml` into the consumer repository.
-3. Use the exact `docmethis-fix` package version supplied by DocMeThis.
+3. Keep the copied wrapper pinned to the DocMeThis-approved workflow SHA; the
+   private runtime version is controlled by that official workflow.
 4. Configure the Fix API key and provider credentials in the consumer secret
    store or inference environment.
-5. Run the workflow manually after connecting the final runtime step, then
-   inspect the generated pull request through normal CI.
+5. Open a pull request from the same repository: Check runs first and Fix pushes
+   the validated correction back to the source branch, where CI and Check run
+   again on the new commit.
 
-The public workflow is a safe skeleton until the private distribution channel
-and runtime execution contract are configured.
+The template is a thin wrapper: every privileged step lives in the official
+reusable workflow
+[`.github/workflows/fix.yml`](.github/workflows/fix.yml), pinned by full SHA. The
+consumer file keeps its own name, `.github/workflows/docmethis-fix.yml`, and
+only declares the call, the permissions and the named secrets. The official
+workflow installs the pinned private runtime, runs Check, invokes Fix with the
+base repository account type, and publishes the report and review patch as
+artifacts.
 
 Operational guides:
 

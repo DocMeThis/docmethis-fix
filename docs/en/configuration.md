@@ -18,7 +18,7 @@ runtime SHA.
 
 ## Recommended Layout
 
-From the root of the consumer repository:
+From the root of the **consumer repository**:
 
 ```text
 .
@@ -30,6 +30,10 @@ From the root of the consumer repository:
     └── workflows/
         └── docmethis-fix.yml
 ```
+
+The consumer file is a wrapper: it calls the official reusable workflow
+`DocMeThis/docmethis-fix/.github/workflows/fix.yml` pinned by full SHA and
+contains no executable step.
 
 The paths in `pyproject.toml` are relative to the project root. The configuration
 files contain no credentials. Provider and Gateway keys are supplied by the
@@ -293,5 +297,5 @@ Before enabling automatic Fix runs, check the following:
    level of patch autonomy the repository accepts.
 7. No credential appears in the repository or generated logs.
 
-Run the workflow manually first, inspect the generated report and patch, and
-only then enable automatic triggers or commit behavior.
+Open a first internal pull request, inspect the generated report and review
+patch, and only then rely on the automatic Fix commit for routine changes.

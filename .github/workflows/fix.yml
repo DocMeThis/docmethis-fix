@@ -1,0 +1,227 @@
+name: DocMeThis Fix officiel
+
+# Workflow réutilisable officiel (F20). Les dépôts consommateurs l'appellent via
+# `jobs.<job_id>.uses` avec un SHA complet approuvé côté Gateway ; l'appelant ne
+# fournit aucune étape exécutable, seulement des secrets nommés.
+on:
+  workflow_call:
+    secrets:
+      DOCMETHIS_FIX_API_KEY:
+        required: true
+      LLM_API_KEY:
+        required: true
+
+concurrency:
+  group: docmethis-fix-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  fix:
+    name: Analyse et correction DocMeThis
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'docmethis-fix[bot]' &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DOCMETHIS_FIX_VERSION: "0.1.0"
+      # F18 : type du propriétaire du dépôt de base, recoupé par Fix.
+      DOCMETHIS_FIX_ACCOUNT_TYPE: ${{ github.event.pull_request.base.repo.owner.type }}
+      # Hooks Git désactivés pour tout le job, y compris les commandes de checkout.
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: core.hooksPath
+      GIT_CONFIG_VALUE_0: /dev/null
+
+    steps:
+      - name: Checkout du head de PR en lecture seule
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Préparer la branche source
+        env:
+          PR_HEAD_REF: ${{ github.head_ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git checkout -B "${PR_HEAD_REF}" "${PR_HEAD_SHA}"
+          git branch --set-upstream-to="origin/${PR_HEAD_REF}" "${PR_HEAD_REF}"
+
+      - name: Matérialiser la configuration de base approuvée
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          # L'endpoint LLM et la sélection des credentials sont lus dans le
+          # commit de base : une PR ne peut pas les rediriger.
+          base_root="$RUNNER_TEMP/docmethis-fix-base"
+          git worktree add --detach "$base_root" "$BASE_SHA"
+          echo "DOCMETHIS_FIX_BASE_ROOT=$base_root" >> "$GITHUB_ENV"
+
+      - name: Installer Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Installer le runtime Fix privé
+        run: |
+          set -euo pipefail
+          venv="$RUNNER_TEMP/docmethis-fix-venv"
+          # Toutes les invocations Python du job sont isolées (-I) : le
+          # checkout de la PR n'entre jamais dans le chemin d'import.
+          python -I -m venv "$venv"
+          "$venv/bin/python" -I -m pip install --upgrade pip
+          "$venv/bin/python" -I -m pip install \
+            --disable-pip-version-check \
+            --no-cache-dir \
+            --index-url https://pkg.docmethis.com \
+            --extra-index-url https://pypi.org/simple \
+            --only-binary=:all: \
+            "docmethis-fix==${DOCMETHIS_FIX_VERSION}"
+          echo "FIX_PYTHON=$venv/bin/python" >> "$GITHUB_ENV"
+
+      - name: Générer le rapport Check
+        id: check
+        env:
+          GITHUB_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set +e
+          "$FIX_PYTHON" -I -m docmethis_check . \
+            --check-mode regression \
+            --no-cache \
+            --json-output-file rapport.json \
+            --on-nonlinear-push-without-base fail
+          status=$?
+          set -e
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          if [ -s rapport.json ]; then
+            printf '\n===== Rapport Check =====\n'
+            cat rapport.json
+          fi
+          if [ "$status" -gt 1 ]; then
+            exit "$status"
+          fi
+          test -s rapport.json
+
+      - name: Préparer la clé API Gateway
+        env:
+          FIX_API_KEY: ${{ secrets.DOCMETHIS_FIX_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$FIX_API_KEY"
+          umask 077
+          printf '%s' "$FIX_API_KEY" > "$RUNNER_TEMP/docmethis-fix-api-key"
+          echo "DOCMETHIS_FIX_API_KEY_FILE=$RUNNER_TEMP/docmethis-fix-api-key" >> "$GITHUB_ENV"
+
+      - name: Préparer le bearer OIDC frais
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}"
+          python -I - <<'PY'
+          import json
+          import os
+          import pathlib
+          import urllib.parse
+          import urllib.request
+
+          parts = urllib.parse.urlsplit(os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"])
+          query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+          query.append(("audience", "https://gateway.docmethis.com"))
+          request = urllib.request.Request(
+              urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(query))),
+              headers={"Authorization": f"Bearer {os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']}"},
+          )
+          with urllib.request.urlopen(request, timeout=10) as response:
+              token = json.load(response)["value"]
+          path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "docmethis-fix-oidc-bearer"
+          descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+          try:
+              os.write(descriptor, token.encode("ascii"))
+          finally:
+              os.close(descriptor)
+          PY
+          echo "DOCMETHIS_FIX_OIDC_BEARER_FILE=$RUNNER_TEMP/docmethis-fix-oidc-bearer" >> "$GITHUB_ENV"
+
+      - name: Exécuter Fix et pousser la branche source
+        if: >-
+          steps.check.outputs.status == '0' || steps.check.outputs.status == '1'
+        env:
+          # La façade fournit la clé LLM générique au runtime, quel que soit le
+          # nom d'environnement déclaré par le profil du projet ; aucune
+          # configuration PR ne peut choisir ces credentials.
+          DOCMETHIS_FIX_LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          set -uo pipefail
+          git config user.name "docmethis-fix[bot]"
+          git config user.email "340263398+docmethis-fix[bot]@users.noreply.github.com"
+
+          set +e
+          # stderr n'est pas redirigé : les commandes de masquage du jeton App
+          # atteignent directement le runner GitHub.
+          "$FIX_PYTHON" -I -m docmethis_fix rapport.json \
+            --project-root . \
+            --push \
+            > fix-result.json
+          status=$?
+          set -e
+          if [ -s fix-result.json ]; then
+            cat fix-result.json
+          fi
+          exit "$status"
+
+      - name: Préparer le patch de revue
+        if: always()
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set +e
+          {
+            git diff --binary "$PR_HEAD_SHA" HEAD
+            git diff --binary
+            git diff --cached --binary
+          } > fix.patch
+          true
+
+      - name: Révoquer les jetons GitHub App
+        if: always()
+        run: |
+          set +e
+          token_dir="$RUNNER_TEMP/docmethis-fix-tokens"
+          failed=0
+          if [ -d "$token_dir" ]; then
+            for token_file in "$token_dir"/token-*; do
+              [ -s "$token_file" ] || continue
+              curl --fail --silent --show-error --connect-timeout 5 --max-time 15 \
+                --request DELETE \
+                --header "Authorization: Bearer $(cat "$token_file")" \
+                https://api.github.com/installation/token || failed=$((failed + 1))
+            done
+          fi
+          rm -rf "$token_dir" "$RUNNER_TEMP/docmethis-fix-base" \
+            "$RUNNER_TEMP/docmethis-fix-api-key" "$RUNNER_TEMP/docmethis-fix-oidc-bearer"
+          if [ "$failed" -gt 0 ]; then
+            echo "::warning::${failed} GitHub App token(s) could not be revoked; they expire within their short lifetime."
+          fi
+          true
+
+      - name: Publier les résultats
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docmethis-fix-results
+          path: |
+            rapport.json
+            fix-result.json
+            fix.patch
+            .docmethis/inference-diagnostics.jsonl
+          if-no-files-found: ignore
