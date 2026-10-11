@@ -43,8 +43,8 @@ in your environment; with a hosted provider, that provider's data policy applies
 
 The DocMeThis Gateway only authorizes the account and validates or reserves
 credit quotas. It receives no source or prompt. The Fix API key authenticates
-that call. Approved OSS workflows may additionally present GitHub OIDC, only to
-prove eligibility.
+that call. OSS eligibility requires GitHub OIDC; publication through the GitHub
+App requires fresh OIDC from an approved official workflow for every account.
 
 ## Free For Individual Users
 
@@ -56,8 +56,27 @@ workspace after free registration, within the monthly credit quota.
 Eligible public open-source projects can use DocMeThis Fix at no charge after validation
 and activation. The repository
 must meet the OSS conditions, including public visibility, and every run remains
-subject to the approved workflow and OSS credit quota. Private and commercial
-repositories use the commercial entitlement and its quota rules.
+subject to the OSS credit quota and any configured subscription-scoped workflow
+policy. App publication always requires the globally approved official workflow.
+Private and commercial repositories use the commercial entitlement and its quota rules.
+
+OSS grants may cover a public personal repository or a public organization
+repository. The subscription's `organization_workspace` capability allows a
+User only when false or expired, and either User or Organization when active.
+OSS alone never requires an Organization. The client supplies no account type.
+Reservations skip the GitHub lookup on exact replay or when the pre-read sees an
+active capability, since both owner types are accepted. The App broker always
+performs the server-side lookup for every type. If the capability expires or is
+revoked before final reserve admission, GitHub facts are missing and OIDC is
+present, the API returns retryable `503 UPSTREAM_UNAVAILABLE`, not a fatal User denial.
+
+DocMeThis administrators manage the exact `cf_is_OSS` checkbox and generic
+`cf_docmethis_github_owner_id` / `cf_docmethis_github_repository_id` bindings on
+the Chargebee **subscription**. The checkbox alone selects OSS, independently of
+plan names, coupons or price. Both IDs are required and must match the attested
+public repository for OSS; they are optional and do not restrict other
+subscriptions even when populated. A removed field is projected as `NULL`.
+The signed technical mode remains `paid`/`oss_free`; `paid` can include free access.
 
 <p align="center">
   <a href="https://docmethis.com/fr/pricing/#ci-fix">
@@ -205,12 +224,16 @@ The public repository contains the integration contract and consumer template;
 the private runtime is provisioned during commercial onboarding.
 
 1. [Talk to DocMeThis](https://docmethis.com) about Fix access and supported targets.
-2. Copy `templates/.github/workflows/docmethis-fix.yml` into the consumer repository.
-3. Keep the copied wrapper pinned to the DocMeThis-approved workflow SHA; the
+2. Install the App from
+   `https://github.com/apps/docmethis-fix/installations/new`, with **Only select
+   repositories**. The consumer repository stores no App identifier or private
+   key.
+3. Copy `templates/.github/workflows/docmethis-fix.yml` into the consumer repository.
+4. Keep the copied wrapper pinned to the DocMeThis-approved workflow SHA; the
    private runtime version is controlled by that official workflow.
-4. Configure the Fix API key and provider credentials in the consumer secret
+5. Configure the Fix API key and provider credentials in the consumer secret
    store or inference environment.
-5. Open a pull request from the same repository: Check runs first and Fix pushes
+6. Open a pull request from the same repository: Check runs first and Fix pushes
    the validated correction back to the source branch, where CI and Check run
    again on the new commit.
 
@@ -219,9 +242,11 @@ reusable workflow
 [`.github/workflows/fix.yml`](.github/workflows/fix.yml), pinned by full SHA. The
 consumer file keeps its own name, `.github/workflows/docmethis-fix.yml`, and
 only declares the call, the permissions and the named secrets. The official
-workflow installs the pinned private runtime, runs Check, invokes Fix with the
-base repository account type, and publishes the report and review patch as
-artifacts.
+workflow installs the pinned private runtime, runs Check, invokes Fix without a
+client account-type field, and publishes the report and review patch as artifacts.
+
+The runtime version pin is defined by `DOCMETHIS_FIX_VERSION` in the official
+workflow. Consumer wrappers reference a published, approved workflow SHA.
 
 Operational guides:
 

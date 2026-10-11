@@ -32,8 +32,6 @@ jobs:
       id-token: write
     env:
       DOCMETHIS_FIX_VERSION: "0.1.0"
-      # F18 : type du propriétaire du dépôt de base, recoupé par Fix.
-      DOCMETHIS_FIX_ACCOUNT_TYPE: ${{ github.event.pull_request.base.repo.owner.type }}
       # Hooks Git désactivés pour tout le job, y compris les commandes de checkout.
       GIT_CONFIG_COUNT: "1"
       GIT_CONFIG_KEY_0: core.hooksPath

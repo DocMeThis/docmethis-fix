@@ -16,6 +16,24 @@ determines which provider protocols, configuration fields, policy values and
 models are accepted. Keep all three files aligned with the same release and
 runtime SHA.
 
+Authorization is not a project setting. DocMeThis administrators manage the exact
+`cf_is_OSS` checkbox and generic owner/repository IDs on the Chargebee subscription.
+The checkbox alone selects OSS; IDs are optional outside OSS and constrain only
+OSS public access, even if populated on other subscriptions. Removed CF values
+project to `NULL`. `organization_workspace` is a capability with expiry: false
+allows User only, true and unexpired allows User or Organization. Reservations
+skip the GitHub lookup on exact replay or when the pre-read sees an active
+capability; the App broker always performs it for every type. If the capability
+expires or is revoked before final reserve admission, GitHub facts are missing
+and OIDC is present, the API returns retryable `503 UPSTREAM_UNAVAILABLE`, not a
+fatal User denial. OSS grants can cover either public
+personal or organization projects according to that capability; no plan/coupon,
+client `account_type` or `DOCMETHIS_FIX_ACCOUNT_TYPE` controls authorization.
+The signed mode remains `paid`/`oss_free`; `paid` does not imply a paid price.
+Subscription-scoped workflow policy is optional, including for OSS, and binding
+when configured. It is distinct from the globally approved official workflow,
+which the App broker always requires.
+
 ## Recommended Layout
 
 From the root of the **consumer repository**:
@@ -169,20 +187,21 @@ query-string credential or signed URL in this value.
 Name of the environment variable from which the runtime reads the provider
 key. It is a name, not the key value itself.
 
-For the example above, the workflow must expose a secret named
-`DOCMETHIS_PROVIDER_API_KEY` to the Fix process:
+For local runs without the facade, set the variable named by the profile.
+In the official workflow, the wrapper passes a named `LLM_API_KEY` secret:
 
 ```yaml
-env:
-  DOCMETHIS_PROVIDER_API_KEY: ${{ secrets.DOCMETHIS_PROVIDER_API_KEY }}
+secrets:
+  DOCMETHIS_FIX_API_KEY: ${{ secrets.DOCMETHIS_FIX_API_KEY }}
+  LLM_API_KEY: ${{ secrets.DOCMETHIS_PROVIDER_API_KEY }}
 ```
 
-The supplied workflow already exposes `OPENROUTER_API_KEY` and
-`OPENCODE_API_KEY`. If the selected profile uses another environment variable,
-add the corresponding secret mapping to the copied workflow.
-
-If the selected profile says `ANTHROPIC_API_KEY`, create and expose
-`ANTHROPIC_API_KEY` instead. The spelling and capitalization must match.
+The supplied wrapper uses `OPENCODE_API_KEY` as its source secret name. Change
+that mapping if needed; the official workflow exposes its value only as
+`DOCMETHIS_FIX_LLM_API_KEY`, overriding the profile's credential lookup without
+changing the provider endpoint or protocol. No executable step or provider `env`
+mapping belongs in the consumer wrapper. Endpoint and credential selection are
+read from the approved base commit, never from the pull request checkout.
 
 ### Timeout settings
 
@@ -274,10 +293,12 @@ inputs and must stay outside Git:
 
 - `DOCMETHIS_FIX_API_KEY_FILE` points to the temporary file containing the
   Gateway key;
-- the provider key is read from the environment variable named by
-  `api_key_env_var`;
+- the provider key is provided by the workflow as `DOCMETHIS_FIX_LLM_API_KEY`;
 - the private runtime is resolved as a pinned package version from
-  `https://pkg.docmethis.com`.
+  `https://pkg.docmethis.com`;
+- the publication token is a short-lived GitHub App installation token,
+  brokered by Gateway: the App is installed once, and no App credential is
+  stored in the consumer repository.
 
 Do not put any of these values in `pyproject.toml`, `llm_api.toml`,
 `llm_policies.toml`, workflow YAML or a support request. See the
@@ -291,7 +312,8 @@ Before enabling automatic Fix runs, check the following:
 2. `policy-profile` names a `[fix.<name>]` table that exists in
    `llm_policies.toml`.
 3. `base_url` is a real endpoint, not the example placeholder.
-4. `api_key_env_var` matches the provider secret name in the workflow.
+4. The wrapper's `LLM_API_KEY` mapping selects the intended provider secret;
+   local runs use the profile's `api_key_env_var`.
 5. `model` is supported by both the endpoint and the pinned private runtime.
 6. The selected `scope` and `include-existing-docstrings` values match the
    level of patch autonomy the repository accepts.
