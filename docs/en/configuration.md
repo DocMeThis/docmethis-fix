@@ -10,11 +10,10 @@ Fix configuration is owned by the consumer repository. It has three parts:
    limits for the selected policy profile.
 
 The public repository provides examples in `templates/config/`. Copy them into
-the consumer repository and adapt them to the provider you use. The profile
-names are local table names chosen in these files; the private runtime release
-determines which provider protocols, configuration fields, policy values and
-models are accepted. Keep all three files aligned with the same release and
-runtime SHA.
+the consumer repository and adapt them to the provider you use. Profile names are
+local table names chosen in these files. Select the connection and generation
+policy explicitly, using your service's API documentation for model IDs and
+native request parameters.
 
 Authorization is not a project setting. DocMeThis administrators manage the exact
 `cf_is_OSS` checkbox and generic owner/repository IDs on the Chargebee subscription.
@@ -26,9 +25,9 @@ skip the GitHub lookup on exact replay or when the pre-read sees an active
 capability; the App broker always performs it for every type. If the capability
 expires or is revoked before final reserve admission, GitHub facts are missing
 and OIDC is present, the API returns retryable `503 UPSTREAM_UNAVAILABLE`, not a
-fatal User denial. OSS grants can cover either public
-personal or organization projects according to that capability; no plan/coupon,
-client `account_type` or `DOCMETHIS_FIX_ACCOUNT_TYPE` controls authorization.
+fatal User denial. OSS grants can cover public personal or organization projects
+according to that capability. Gateway evaluates eligibility from the subscription
+and verified GitHub context.
 The signed mode remains `paid`/`oss_free`; `paid` does not imply a paid price.
 Subscription-scoped workflow policy is optional, including for OSS, and binding
 when configured. It is distinct from the globally approved official workflow,
@@ -63,7 +62,7 @@ Put the shared Fix settings in `[tool.docmethis.fix]`:
 
 ```toml
 [tool.docmethis.fix]
-api-profile = "example"
+profile = "example"
 policy-profile = "example"
 api-config-file = ".github/docmethis-fix/llm_api.toml"
 policy-config-file = ".github/docmethis-fix/llm_policies.toml"
@@ -73,10 +72,10 @@ include-existing-docstrings = true
 scope = "impacted"
 ```
 
-### `api-profile`
+### `profile`
 
 Name of the local table to load from `llm_api.toml`. With the example file,
-`api-profile = "example"` selects `[example]`. `example` is not a profile
+`profile = "example"` selects `[example]`. `example` is not a profile
 identifier supplied by the runtime; it is simply the table name used by this
 example.
 
@@ -165,14 +164,47 @@ request_timeout_cap_seconds = 30.0
 connect_timeout_seconds = 10.0
 read_timeout_seconds = 30.0
 pool_timeout_seconds = 10.0
+http_max_connections = 10
+http_max_keepalive_connections = 5
+http_keepalive_expiry_seconds = 30.0
 ```
 
 ### `provider`
 
-Select the provider protocol understood by the runtime. The accepted values
-are release-specific. `openai_compatible` in the example means that the
-endpoint follows the OpenAI-compatible request protocol; it does not select a
-provider account by itself.
+Select the API protocol supported by your inference endpoint:
+
+| Value | Generation endpoint relative to `base_url` |
+|---|---|
+| `openai_compatible` | `/chat/completions` |
+| `openai_responses` | `/responses` |
+| `anthropic` | `/messages` |
+| `gemini` | `/models/{model}:generateContent` |
+
+The protocol is selected explicitly by `provider`, separately from the URL and
+model. Consult your service's documentation to choose the protocol and a model
+available to your account.
+
+The supplied `responses` API profile uses OpenCode Go at
+`https://opencode.ai/inference/go/v1`; pair it with the `responses` policy and a
+model documented for that endpoint. Go models served through Chat Completions
+need a Chat profile instead. A project TOML file replaces the packaged file:
+missing profiles do not fall back to packaged tables, and tables do not inherit
+settings from each other.
+
+Without project TOML files, select the packaged API and policy explicitly:
+
+```toml
+[tool.docmethis.fix]
+profile = "opencode_responses"
+policy-profile = "responses"
+```
+
+The packaged `[fix.responses]` policy uses the OpenCode Go model `gpt-6-luna`
+and `max_output_tokens = 2000`. Confirm model
+availability for your account or override `model`. API and policy profiles are
+independent: selecting `opencode_responses` alone leaves the default policy
+selected; it does not convert the default Qwen/Chat settings. If you supply a
+policy TOML, define its `[fix.responses]` table or select another matching policy.
 
 ### `base_url`
 
@@ -217,9 +249,11 @@ provider recommendations unless there is a measured reason to change them.
 Timeouts do not increase the provider's model token budget; that belongs in the
 policy profile.
 
-The private runtime may support additional connection fields such as pool sizes
-or a provider-specific engine. Only use fields documented by the matching
-release.
+The pool fields are `http_max_connections`, `http_max_keepalive_connections` and
+`http_keepalive_expiry_seconds`. Extra HTTP headers belong in a profile's
+`extra_headers` table. `{session_id}` expands once per gateway instance; use it
+for OpenCode Go's `x-opencode-session`. Authentication and transport headers are
+reserved; DocMeThis supplies its own User-Agent.
 
 ## Policy Profiles
 
@@ -264,9 +298,9 @@ in `llm_api.toml`.
 
 ### `token_budget`
 
-Maximum generation budget allocated to a correction. A larger budget can help
-with a complex contract, but costs more and does not guarantee a better patch.
-Use the value supported by the selected model and account quota.
+Budget checked against the input and output token counts returned by the service.
+It is distinct from a provider's native output limit and is not translated into
+one. Set that limit in `generation_options` using the API's exact field name.
 
 ### `prompt_variant`
 
@@ -281,10 +315,55 @@ is supported.
 
 ### `generation_options`
 
-Provider or model-specific generation parameters belong under this nested table.
-For example, `temperature` controls sampling and `max_tokens` bounds the
-generated response. These settings are not portable across providers; change
-them only with the selected model's documentation.
+This is the single catch-all table for native JSON request parameters. Names,
+case, values and nested objects are sent unchanged. Consult your service's API
+and model documentation: it accepts or rejects the options. DocMeThis checks
+JSON validity, not provider-specific ranges or a whitelist of generation knobs.
+Unsupported options are not silently omitted, renamed or retried with different
+parameters.
+
+The templates include complete, separate Chat, Responses, Anthropic and Gemini
+policies. Their native output limits are respectively `max_tokens`,
+`max_output_tokens`, `max_tokens` and `generationConfig.maxOutputTokens`.
+For example, these are options for a Responses policy:
+
+```toml
+[fix.responses.generation_options]
+max_output_tokens = 2000
+
+[fix.responses.generation_options.reasoning]
+effort = "low"
+
+[fix.responses.generation_options.text]
+verbosity = "low"
+```
+
+Use parameter names and structures from your service's API reference. In
+pyproject overrides, outer configuration fields may use dashes, but keys inside
+`generation-options` retain their exact native spelling.
+
+DocMeThis owns the model, canonical prompt, non-streaming execution and structured
+output schema. These paths cannot appear in `generation_options`, even when the
+corresponding runtime field is absent:
+
+| Protocol | Reserved paths (in addition to `model` for every protocol) |
+|---|---|
+| Chat Completions | `messages`, `stream`, `response_format` |
+| Responses | `input`, `stream`, `background`, `text.format` |
+| Anthropic | `messages`, `stream`, `output_config.format` |
+| Gemini | `contents`, `generationConfig.responseMimeType`, `generationConfig.responseSchema`, `generationConfig.responseJsonSchema` |
+
+Objects merge by distinct keys without replacing values; lists are indivisible.
+A reserved path, replacement of its parent, or value collision fails before the
+network call. Neighboring fields such as `text.verbosity` remain available.
+Native output limits are user options, not reserved fields. Structured-output
+fallback remains controlled by DocMeThis; an ordinary invalid option does not
+trigger a fallback to another protocol, model or endpoint.
+
+A schema validation error (for example `invalid_json_schema`) is reported as an
+error, not as a missing capability. JSON-prompted fallback requires an explicit
+structured-output incompatibility; the words `invalid` and `json_schema` in an
+error message are not sufficient.
 
 ## Secrets And Configuration
 
@@ -308,7 +387,7 @@ Do not put any of these values in `pyproject.toml`, `llm_api.toml`,
 
 Before enabling automatic Fix runs, check the following:
 
-1. `api-profile` names a table that exists in `llm_api.toml`.
+1. `profile` names a table that exists in `llm_api.toml`.
 2. `policy-profile` names a `[fix.<name>]` table that exists in
    `llm_policies.toml`.
 3. `base_url` is a real endpoint, not the example placeholder.

@@ -38,14 +38,12 @@ That workflow checks out the source branch, runs Check, invokes Fix and pushes
 the validated correction back to that branch, where CI and Check run again.
 Pull requests from forks are excluded.
 
-### Updating the approved workflow SHA
+### Approved workflow reference
 
-DocMeThis approves each official workflow version by full SHA. When a new
-version is announced, replace the SHA in the wrapper's `uses:` reference. During
-the announced coexistence period, the previous version keeps working; after it
-is removed from the approved list, new runs of that version are refused, while
-installation tokens already issued simply expire. Never point the wrapper at a
-branch or a tag.
+Use the full DocMeThis-approved SHA supplied in the wrapper template. Gateway
+verifies the identity of the official reusable workflow before granting
+publication credentials. Keep the `uses:` reference pinned to that SHA, never
+to a branch or tag.
 
 ## 2. Install the GitHub App
 
@@ -71,7 +69,7 @@ Add the Fix settings to the consumer repository's `pyproject.toml`:
 
 ```toml
 [tool.docmethis.fix]
-api-profile = "example"
+profile = "example"
 policy-profile = "example"
 api-config-file = ".github/docmethis-fix/llm_api.toml"
 policy-config-file = ".github/docmethis-fix/llm_policies.toml"
@@ -85,7 +83,7 @@ In the copied files:
 
 - replace the example provider endpoint in `llm_api.toml`;
 - replace `provider/model` in `llm_policies.toml` with a supported model;
-- keep `api-profile` and `policy-profile` synchronized with the table names.
+- keep `profile` and `policy-profile` synchronized with the table names.
 
 In the official workflow, the API profile, the API config file and its
 overrides — which carry the endpoint and the credential selection — are read
@@ -109,26 +107,6 @@ The official workflow pins the exact package version through
 `DOCMETHIS_FIX_VERSION` in [`.github/workflows/fix.yml`](../../.github/workflows/fix.yml).
 Use a published, approved workflow SHA; consumers do not need to maintain a
 second runtime version pin or access the private source repository.
-
-Reservations contain two fields (`requested_credits`, `request_fingerprint`).
-Saga journals use v4 only, with no v2/v3 reader. When switching from an older
-journal format:
-
-1. Stop starting new Fix operations. Using the compatible runtime and Gateway,
-   confirm each old operation's accounting state and finish every pending
-   Git/push/PR publication. Reconcile uncertain operations first.
-2. Archive **all v2/v3 UUID journal files, including terminal ones**, outside each
-   active journal directory. Preserve their contents, filenames, batch manifests
-   and accounting/publication evidence. Include per-target batch directories and
-   any `DOCMETHIS_FIX_JOURNAL_DIR` override.
-3. Keep those archives and start v4 with a clean active directory. For example,
-   archive project `.docmethis` journals under the sibling
-   `.docmethis-archives/pre-v4/`; do not erase `.docmethis` wholesale or edit old
-   schema versions to make them appear compatible.
-
-Completing an old operation alone is insufficient: the v4 reader rejects its
-file before filtering terminal states. No conversion or backward-compatible
-reader is provided. If there are no old journals, no archival step is needed.
 
 ## 5. Add GitHub values
 
@@ -178,7 +156,6 @@ The publication rights are validated at run time:
 - the App broker always performs the server-side GitHub lookup for every type,
   even with an active capability or after a reservation replay. Reservations skip
   the lookup on exact replay or when the pre-read sees an active capability;
-  no client account-type field or Actions variable is accepted as authority;
 - `organization_workspace` is a capability: false/expired allows **User only**;
   active and non-expired allows **User or Organization**, not Organization only;
 - OSS requires the exact **`subscription.cf_is_OSS`** checkbox, matching generic
@@ -213,10 +190,9 @@ official workflow guard is mandatory and separate from optional subscription pol
 
 The official workflow `fix.yml`, called by the wrapper, installs the pinned
 wheel and its dependencies with `pip` in a temporary virtual environment, then runs
-`docmethis_check` and `docmethis_fix` under isolated Python (`-I`). It supplies no
-`DOCMETHIS_FIX_ACCOUNT_TYPE`; Gateway applies the server-side GitHub admission
-rules, and Fix obtains a short-lived GitHub App installation token from Gateway
-for publication only.
+`docmethis_check` and `docmethis_fix` under isolated Python (`-I`). Gateway applies
+the server-side GitHub admission rules, and Fix obtains a short-lived GitHub App
+installation token from Gateway for publication only.
 
 Keep API keys and temporary key files out of Git. Do not run Fix with secrets on
 untrusted fork code.

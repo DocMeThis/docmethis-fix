@@ -161,38 +161,50 @@ docstring rewrite is not the default.
 
 ## Local Execution
 
-Fix also supports local runs when the executable runtime is available. This
-public repository contains the integration contract and workflow templates; it
-does not ship the executable runtime. Use a DocMeThis engine checkout or the
-matching private release supplied for your environment.
+Install the exact `docmethis-fix` package version supplied during onboarding in a
+Python 3.12+ virtual environment. Configure the target project using the
+[configuration guide](docs/en/configuration.md), including its provider endpoint,
+model and profiles.
 
-After installing the engine checkout with `uv sync`, prepare a Check report and
-keep both API keys outside Git:
+Local execution requires an activated subscription that permits API-key-only
+requests to Gateway for authorization and credit quotas.
+
+The example uses `DOCMETHIS_PROVIDER_API_KEY`, as declared by the `example` API
+template. Set the environment variable named by your selected profile and keep
+both API keys outside Git:
 
 ```bash
-ENGINE_ROOT=/path/to/docmethis
+FIX_VERSION="<version supplied by DocMeThis>"
+FIX_ENV="$HOME/.venvs/docmethis-fix"
+python3.12 -m venv "$FIX_ENV"
+FIX_PYTHON="$FIX_ENV/bin/python"
+
+"$FIX_PYTHON" -I -m pip install \
+  --index-url https://pkg.docmethis.com \
+  --extra-index-url https://pypi.org/simple \
+  --only-binary=:all: \
+  "docmethis-fix==$FIX_VERSION"
+
 TARGET_ROOT=/path/to/project
 REPORT="$TARGET_ROOT/check.json"
 
 export DOCMETHIS_FIX_API_KEY_FILE="$HOME/.config/docmethis/fix-api-key"
-export OPENROUTER_API_KEY="..."
+export DOCMETHIS_PROVIDER_API_KEY="..."
 test -s "$DOCMETHIS_FIX_API_KEY_FILE"
 
-uv --directory "$ENGINE_ROOT" run python -m docmethis_check "$TARGET_ROOT" \
+"$FIX_PYTHON" -I -m docmethis_check "$TARGET_ROOT" \
   --base-ref main \
   --json-output-file "$REPORT"
 
-uv --directory "$ENGINE_ROOT" run python -m docmethis_fix "$REPORT" \
+"$FIX_PYTHON" -I -m docmethis_fix "$REPORT" \
   --project-root "$TARGET_ROOT" \
-  --profile openrouter \
-  --model gpt-oss-20b \
   --preview
 ```
 
-`DOCMETHIS_FIX_API_KEY_FILE` contains the Gateway key; `OPENROUTER_API_KEY`
-authenticates the selected LLM provider. Use the provider environment variable
-named by the selected profile. `--preview` generates the first eligible patch
-without writing files or committing, but it still contacts Gateway and the LLM.
+`DOCMETHIS_FIX_API_KEY_FILE` contains the Gateway key; `DOCMETHIS_PROVIDER_API_KEY`
+authenticates the inference service in this example. `--preview` generates the
+first eligible patch without writing files or committing, but it still contacts
+Gateway and the LLM.
 Omit `--preview` to apply corrections; add `--no-commit` to leave them
 uncommitted.
 
@@ -242,11 +254,16 @@ reusable workflow
 [`.github/workflows/fix.yml`](.github/workflows/fix.yml), pinned by full SHA. The
 consumer file keeps its own name, `.github/workflows/docmethis-fix.yml`, and
 only declares the call, the permissions and the named secrets. The official
-workflow installs the pinned private runtime, runs Check, invokes Fix without a
-client account-type field, and publishes the report and review patch as artifacts.
+workflow installs the pinned private runtime, runs Check, invokes Fix, and
+publishes the report and review patch as artifacts.
 
 The runtime version pin is defined by `DOCMETHIS_FIX_VERSION` in the official
 workflow. Consumer wrappers reference a published, approved workflow SHA.
+
+The inference contract selects Chat Completions (`openai_compatible`), Responses
+(`openai_responses`), Anthropic Messages or Gemini generateContent by `provider`.
+`generation_options` contains native API parameters, without automatic renaming
+or omission. The configuration guide describes the fields owned by the runtime.
 
 Operational guides:
 
