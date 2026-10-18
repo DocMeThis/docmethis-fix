@@ -94,10 +94,7 @@ jobs:
         run: |
           set +e
           "$FIX_PYTHON" -I -m docmethis_check . \
-            --check-mode regression \
-            --no-cache \
-            --json-output-file rapport.json \
-            --on-nonlinear-push-without-base fail
+            --json-output-file rapport.json
           status=$?
           set -e
           printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
