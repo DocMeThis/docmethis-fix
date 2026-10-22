@@ -73,6 +73,7 @@ profile = "example"
 policy-profile = "example"
 api-config-file = ".github/docmethis-fix/llm_api.toml"
 policy-config-file = ".github/docmethis-fix/llm_policies.toml"
+docstring-quote-style = "double"
 docstring-language = "en"
 max-concurrency = 2
 include-existing-docstrings = true

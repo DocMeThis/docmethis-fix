@@ -66,6 +66,7 @@ profile = "example"
 policy-profile = "example"
 api-config-file = ".github/docmethis-fix/llm_api.toml"
 policy-config-file = ".github/docmethis-fix/llm_policies.toml"
+docstring-quote-style = "double"
 docstring-language = "en"
 max-concurrency = 2
 include-existing-docstrings = true
@@ -106,6 +107,12 @@ different files.
 
 Path to the policy profile file, relative to the project root. The file contains
 model selection and generation limits, not provider credentials.
+
+### `docstring-quote-style`
+
+Use `"double"` or `"single"` for the docstring delimiters. This setting takes
+precedence over `[tool.ruff.format].quote-style`; Fix requires one of the two
+settings to be declared. Keep the choice consistent with the project's formatter.
 
 ### `docstring-language`
 
