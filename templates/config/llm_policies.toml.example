@@ -1,5 +1,6 @@
 # Copy to the consumer repository as .github/docmethis-fix/llm_policies.toml and select a
 # model/policy supported by the private runtime release.
+# JSON is validated locally by default. Set structured_output_mode = "guided_json" only for a supported endpoint/model.
 
 [fix.example]
 model = "provider/model"
@@ -7,7 +8,7 @@ max_attempts = 3
 timeout_seconds = 30.0
 token_budget = 8000
 prompt_variant = "compact"
-structured_output_mode = "guided_json"
+structured_output_mode = "json_prompted"
 
 [fix.example.generation_options]
 temperature = 0.0
@@ -20,7 +21,7 @@ max_attempts = 3
 timeout_seconds = 30.0
 token_budget = 8000
 prompt_variant = "compact"
-structured_output_mode = "guided_json"
+structured_output_mode = "json_prompted"
 
 [fix.responses.generation_options]
 max_output_tokens = 2000
@@ -31,7 +32,7 @@ max_attempts = 3
 timeout_seconds = 30.0
 token_budget = 8000
 prompt_variant = "compact"
-structured_output_mode = "guided_json"
+structured_output_mode = "json_prompted"
 
 [fix.anthropic.generation_options]
 max_tokens = 2000
@@ -42,7 +43,7 @@ max_attempts = 3
 timeout_seconds = 30.0
 token_budget = 8000
 prompt_variant = "compact"
-structured_output_mode = "guided_json"
+structured_output_mode = "json_prompted"
 
 [fix.gemini.generation_options.generationConfig]
 maxOutputTokens = 2000
