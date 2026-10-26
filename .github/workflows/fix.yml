@@ -31,7 +31,7 @@ jobs:
       contents: read
       id-token: write
     env:
-      DOCMETHIS_FIX_VERSION: "0.1.0"
+      DOCMETHIS_FIX_VERSION: "0.1.2"
       # Hooks Git désactivés pour tout le job, y compris les commandes de checkout.
       GIT_CONFIG_COUNT: "1"
       GIT_CONFIG_KEY_0: core.hooksPath
@@ -218,5 +218,5 @@ jobs:
             rapport.json
             fix-result.json
             fix.patch
-            .docmethis/inference-diagnostics.jsonl
+            .docmethis/inference-server-diags.jsonl
           if-no-files-found: ignore
