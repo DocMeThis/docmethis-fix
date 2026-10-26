@@ -270,8 +270,13 @@ This processes all eligible targets in the report and leaves the corrections
 uncommitted. An apply run may generate new candidates.
 Inspect `fix-result.json` for applied, skipped or failed targets and token usage.
 
-To have Fix create a local commit, omit `--no-commit`. Local execution does not
-push by default. The supplied GitHub Actions workflow requests the push explicitly.
+To have Fix create one local commit containing the corrected files, omit
+`--no-commit`. Opt in to `--commit-per-file` for independent validation,
+application and commits per file, continuing after local failures. The project
+setting and partial-result/recovery behavior are described in the
+[configuration guide](docs/en/configuration.md#commit-per-file).
+Local execution does not push by default. The supplied GitHub Actions workflow
+requests the push explicitly.
 
 Provider-specific setup is described in the
 [configuration guide](docs/en/configuration.md#api-profiles).

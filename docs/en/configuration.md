@@ -56,7 +56,66 @@ The paths in `pyproject.toml` are relative to the project root. The configuratio
 files contain no credentials. Provider and Gateway keys are supplied by the
 workflow environment as described in the [installation guide](installation.md).
 
+## Ruff coherence: NumPy only
+
+DocMeThis currently generates NumPy-style docstrings only. When Ruff selects
+docstring rules (`D`, `ALL`, etc.), declare the same convention in the Ruff
+configuration actually used by the project:
+
+```toml
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+```
+
+For standalone `ruff.toml` or `.ruff.toml`, use `[lint.pydocstyle]` instead.
+Apply the setting to the existing project configuration and preserve the
+project's other selections and ignores.
+
+Fix checks the project and target-directory configurations, their precedence
+and explicit `extend` inheritance before LLM preflight, reservations or batch
+workers. An incompatible convention, a missing convention with docstring rules
+selected, an unreadable configuration or explicit rules conflicting with the
+supported rendering causes an immediate configuration error. A private override
+inside Fix cannot align a separate Ruff hook or CI job: persist the convention
+in the project configuration.
+
+The supplied settings keep only these explicit exclusions:
+
+- `D401`: imperative-mood heuristics are not a reliable multilingual prose contract;
+- `COM812`: trailing commas are owned by `ruff format`.
+
+NumPy excludes D203/D213 and D417 by default, so no additional D203/D213 ignores
+are needed. Explicit rule selections retain Ruff's precedence; explicitly
+selecting D417 still enables its parameter
+checks. The JSON document model and Verify checks remain independent of these
+Ruff selections.
+
 ## Project Settings
+
+### Exception analysis and documentation depths
+
+These shared settings belong in `[tool.docmethis]`, independently of the Fix table:
+
+```toml
+[tool.docmethis]
+exception_analysis_depth = 2
+exception_documentation_depth = 1
+```
+
+Both values are strict non-negative integers, with documentation depth no greater
+than analysis depth. Zero means local raises only; one also includes exceptions
+raised directly by called functions. For A → B → C, documentation depth 1 includes
+local raises from A and B, not C. Analysis 4/documentation 0 is supported.
+
+AST facts retain their minimum propagation distance, conditions and provenance.
+DIA uses the analysis depth. Documentary generation, Check, Verify, Audit and Fix
+use the shared documentary scope for DMT-4001/DMT-4002. A known exception outside
+that scope is a deterministic removal candidate; keeping the AST fact does not
+authorize documenting it. Delegation to a direct helper remains documentable at
+the default depth of 1.
+
+Regenerate the Check report after changing these settings or after applying Fix.
+Fix still rejects stale docstring hashes and newly introduced Verify errors.
 
 Put the shared Fix settings in `[tool.docmethis.fix]`:
 
@@ -71,6 +130,7 @@ docstring-language = "en"
 max-concurrency = 2
 include-existing-docstrings = true
 scope = "impacted"
+commit-per-file = false
 ```
 
 ### `profile`
@@ -155,6 +215,29 @@ Controls which Check findings Fix may consider:
 Use `diff` for the narrowest and most predictable patch. Use `impacted` when a
 private helper change can make an unchanged public API stale and Check provides
 the required impact evidence.
+
+### `commit-per-file`
+
+Defaults to `false`: a normal Fix invocation applies its patches as one atomic
+multi-file session and creates one commit containing the corrected files.
+
+Set `commit-per-file = true`, or pass `--commit-per-file`, to isolate patch
+validation, application and commits by file. A local failure in one file preserves
+the other validated files and allows later files to be processed and committed.
+All supplied patches within a failed file remain unapplied. Snapshot drift in
+one candidate excludes its entire file. Files staged outside Fix are not included.
+
+CLI flags override the project setting. `--no-commit-per-file` explicitly selects
+the grouped behavior. Explicit batch modes keep their own reservation and recovery
+boundaries; grouping applies within each child invocation.
+
+Partial results remain failures: Fix reports the affected paths and all successful
+`commit_shas`, including successes after a local commit failure. A commit failure
+returns exit code 2 and prevents push/PR publication. Created commits remain local;
+recovery preserves their SHAs and commits only the remaining changes, without new
+generation or a new reservation. Journal failures and inconsistent recovery hashes
+remain global errors. Partial patch results follow the existing whole-reservation
+release contract and return a nonzero result.
 
 ## API Profiles
 
@@ -262,6 +345,18 @@ The pool fields are `http_max_connections`, `http_max_keepalive_connections` and
 for OpenCode Go's `x-opencode-session`. Authentication and transport headers are
 reserved; DocMeThis supplies its own User-Agent.
 
+### Inference-server diagnostics
+
+The runtime records provider/server warnings and errors in
+`.docmethis/inference-server-diags.jsonl`. Use `--diagnostics-file <path>` to
+choose another destination.
+
+The log is reset for each invocation and can be empty when server calls succeed.
+Local precondition, Verify and Ruff-safe failures are reported in Fix's JSON
+result instead. Only existing, non-empty logs are announced on stderr or listed
+in the result's `diagnostics_file`/`diagnostics_files` fields; these fields are
+`null` when no corresponding log contains events.
+
 ## Policy Profiles
 
 Copy `templates/config/llm_policies.toml.example` to
@@ -275,7 +370,7 @@ max_attempts = 3
 timeout_seconds = 30.0
 token_budget = 8000
 prompt_variant = "compact"
-structured_output_mode = "guided_json"
+structured_output_mode = "json_prompted"
 
 [fix.example.generation_options]
 temperature = 0.0
@@ -316,9 +411,30 @@ specific; use only names supplied by the matching policy documentation.
 
 ### `structured_output_mode`
 
-Select how the model response is constrained before Fix validates it. Keep the
-release-provided value unless the runtime documentation says that another mode
-is supported.
+Fix defaults to `json_prompted`: the prompt requests JSON and Fix strictly
+validates the response locally. No native structured-output schema is sent.
+
+Opt in to `guided_json` when your endpoint/model combination reliably supports
+native JSON Schema constraints. It constrains generation at the provider and
+uses the same local validation afterwards. Enable it in your policy profile:
+
+```toml
+[fix.example]
+# Keep the other required policy fields from the example above.
+structured_output_mode = "guided_json"
+```
+
+Or override the selected policy from `pyproject.toml`:
+
+```toml
+[tool.docmethis.fix.policy]
+structured-output-mode = "guided_json"
+```
+
+Existing explicit mode selections remain authoritative. If guided output is
+explicitly unsupported, Fix can fall back to `json_prompted`; an invalid schema
+or an opaque HTTP 400 does not authorize that fallback. Diagnostics record the
+requested mode, effective mode and fallback reason.
 
 ### `generation_options`
 

@@ -86,6 +86,11 @@ In the copied files:
 - replace `provider/model` in `llm_policies.toml` with a supported model;
 - keep `profile` and `policy-profile` synchronized with the table names.
 
+If Ruff checks docstrings, DocMeThis supports NumPy docstrings; declare
+`convention = "numpy"` under `[tool.ruff.lint.pydocstyle]` (or
+`[lint.pydocstyle]` in a standalone Ruff file). Fix stops before inference when
+the conventions conflict. See [Ruff coherence](configuration.md#ruff-coherence-numpy-only).
+
 In the official workflow, the API profile, the API config file and its
 overrides — which carry the endpoint and the credential selection — are read
 from the **approved base commit** of the pull request, never from the PR
